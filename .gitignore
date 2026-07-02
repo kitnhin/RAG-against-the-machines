@@ -2,3 +2,5 @@ data
 datasets
 .venv
 __pycache__
+.vscode
+test
