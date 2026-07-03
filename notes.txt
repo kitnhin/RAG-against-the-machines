@@ -1,0 +1,16 @@
+how langchain python splitter works:
+
+1) whole file = 1 chunk -> if chunk > maxsize -> return chunk (whole file)
+2) split file by classes and functions -> for each chunk: if chunk < max_size -> dont do anything
+3) if chunk > max_size -> split by lines -> check size -> continue splitting
+
+overlapping structure (tbc): (for test.txt)
+1) splitting follows the hierechy (e.g. "\n\n" , "\n", " ", ...)
+2) lvl1 (split by "\n\n")" -> gets first section -> sees that chunk size > max -> clear lvl1queue (doc1) -> section enters lvl2
+3) lvl2 (split by "\n") -> gets first section -> append to lvl2 queue -> doc2 length < max -> append second section -> continue until doc2 length > max (reach mediumline3)
+4) lvl2: lock doc contents as a chunk -> pop sections from front of lvl2 queue (doc2) until doc length < overlap (until only mediumline3 remain in doc)
+5) lvl2:  continue append section -> cmp lvl2 queue length -> get chunk -> pop -> etc -> until see long line
+6) lvl2: line size > max size -> clear doc2 -> proceed to lvl3
+7) lvl3 (split by " "): repeat steps like lvl2 (split, push sections to lvl3 doc, cmp size, save chunk, pop, etc)
+8) lvl2: continue after process long line
+9) lvl1: after process first chunk at lvl2, append second section to doc1 (empty)-> doc1 length still < max length -> append third section -> end file -> save chunk
