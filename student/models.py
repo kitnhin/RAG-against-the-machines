@@ -21,7 +21,7 @@ class RagDataset(BaseModel):
 
 class MinimalSearchResults(BaseModel):
     question_id: str
-    question: str
+    question: str = Field(serialization_alias="question_str")
     retrieved_sources: List[MinimalSource]
 
 class MinimalAnswer(MinimalSearchResults):
@@ -29,13 +29,13 @@ class MinimalAnswer(MinimalSearchResults):
 
 class StudentSearchResults(BaseModel):
     search_results: List[MinimalSearchResults]
-k: int
+    k: int
+
 class StudentSearchResultsAndAnswer(StudentSearchResults):
     search_results: List[MinimalAnswer]
 
 #extras
 class Chunk(BaseModel):
-    chunk_id: int
     content: str
     file_path: str
     first_character_index: int
