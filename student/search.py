@@ -4,7 +4,7 @@ import bm25s
 import json
 from tqdm import tqdm
 
-def search_main(query: str, k: int) -> MinimalSearchResults:
+def search_main(query: str, k: int, verbose=True) -> MinimalSearchResults:
     try:
         retriever =  bm25s.BM25.load("data/processed/bm25_index")
 
@@ -24,7 +24,7 @@ def search_main(query: str, k: int) -> MinimalSearchResults:
 
         search_res = MinimalSearchResults(
             question_id = "single_query",
-            question = query,
+            question_str = query,
             retrieved_sources = retrieved_sources
         )
 
@@ -33,8 +33,9 @@ def search_main(query: str, k: int) -> MinimalSearchResults:
             k = k
         )
 
-        print("------------ Search Output ------------")
-        print(json.dumps(student_search_res.model_dump(), indent=2))
+        if verbose:
+            print("------------ Search Output ------------")
+            print(json.dumps(student_search_res.model_dump(), indent=2))
 
         return student_search_res
 

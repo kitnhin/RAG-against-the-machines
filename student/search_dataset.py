@@ -30,7 +30,7 @@ def search_dataset_main(dataset_path: str, k: int, save_directory: str) -> Minim
 
             search_res = MinimalSearchResults(
                 question_id = question["question_id"],
-                question = query,
+                question_str = query,
                 retrieved_sources = retrieved_sources
             )
 
@@ -46,7 +46,7 @@ def search_dataset_main(dataset_path: str, k: int, save_directory: str) -> Minim
         output_path = os.path.join(save_directory, dataset_filename)
         os.makedirs(save_directory, exist_ok=True)
         with open(output_path, "w") as f:
-            json.dump(student_search_res.model_dump(by_alias=True), f, indent=2)
+            json.dump(student_search_res.model_dump(), f, indent=2)
 
         # print("------------ Search Output ------------")
         # print(json.dumps(student_search_res.model_dump(), indent=2))

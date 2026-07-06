@@ -21,7 +21,7 @@ class RagDataset(BaseModel):
 
 class MinimalSearchResults(BaseModel):
     question_id: str
-    question: str = Field(serialization_alias="question_str")
+    question_str: str
     retrieved_sources: List[MinimalSource]
 
 class MinimalAnswer(MinimalSearchResults):
