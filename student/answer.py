@@ -5,9 +5,17 @@ from .models import MinimalAnswer, StudentSearchResultsAndAnswer
 
 generator = pipeline("text-generation", model="Qwen/Qwen3-0.6B")
 
+file_cache: dict[str, str]= {}
+
 def get_chunk_data(file_path: str, first_character_index: int, last_character_index: int) -> str:
-    with open(file_path, 'r') as f:
-        file_contents = f.read()
+
+    if file_path in file_cache:
+        file_contents = file_cache[file_path]
+    else:
+        with open(file_path, 'r') as f:
+            file_contents = f.read()
+        file_cache[file_path] = file_contents
+
     chunk_content = file_contents[first_character_index:last_character_index]
     return chunk_content
 
