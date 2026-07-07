@@ -74,6 +74,9 @@ def save_chunks(chunks_list: list[Chunk]) -> None:
     
 def index_main(max_chunk_size: int, overlap: int) -> None:
     try:
+        if not os.path.isdir(repo_dir):
+            raise Exception(f"Index dir {repo_dir} doesn't exist")
+
         chunks_list: list[Chunk] = []
         files_list: list[tuple(str, str)] = []
         for root, dirs, files in os.walk(repo_dir):

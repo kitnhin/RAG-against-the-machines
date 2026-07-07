@@ -1,12 +1,21 @@
 import json
 from .search import search_main
 from transformers import pipeline
+import torch
 
 def get_chunk_data(file_path, first_character_index, last_character_index):
     with open(file_path, 'r') as f:
         file_contents = f.read()
     chunk_content = file_contents[first_character_index:last_character_index]
     return chunk_content
+
+def extract_generated_str(generated_text):
+    idx = generated_text.find("</think>")
+
+    if idx == -1:
+        return generated_text
+    
+    return generated_text[idx + len("</think>"):].strip()
 
 def answer_main(query: str, k: int = 5):
     try:
@@ -33,10 +42,9 @@ def answer_main(query: str, k: int = 5):
         ]
         print(f"Generating response ...")
         result = generator(prompt_messages, max_new_tokens=42)
-        generated_text = result[0]['generated_text'][-1]["content"]
-        print(f"Generated Answer: {generated_text}")
+        generated_text = extract_generated_str(result[0]['generated_text'][-1]["content"])
+        print(f"-----------------------Generated Answer: -----------------------\n{generated_text}")
         return generated_text
-
 
     except Exception as e:
         print(f"Error: {e}")

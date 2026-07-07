@@ -4,7 +4,7 @@ import bm25s
 import json
 from tqdm import tqdm
 
-def search_dataset_main(dataset_path: str, k: int, save_directory: str) -> MinimalSearchResults:
+def search_dataset_main(dataset_path: str, k: int, save_directory: str) -> StudentSearchResults:
     try:
         retriever =  bm25s.BM25.load("data/processed/bm25_index")
         with open("data/processed/chunks", "r") as f:

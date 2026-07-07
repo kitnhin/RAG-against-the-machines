@@ -18,16 +18,16 @@ THRESHOLD = 0.5
 #answer
 
 index:
-	python -m student index --max_chunk_size $(MAX_CHUNK_SIZE) --overlap $(OVERLAP)
+	uv run python -m student index --max_chunk_size $(MAX_CHUNK_SIZE) --overlap $(OVERLAP)
 
 search:
-	python -m student search --query "$(QUERY)" --k $(k)
+	uv run python -m student search --query "$(QUERY)" --k $(k)
 
 search_dataset:
-	python -m student search_dataset --dataset_path $(SEARCH_DATASET_PATH) --k $(k) --save_directory $(SEARCH_DATASET_OUTPUT)
+	uv run python -m student search_dataset --dataset_path $(SEARCH_DATASET_PATH) --k $(k) --save_directory $(SEARCH_DATASET_OUTPUT)
 
 momo_search:
 	./moulinette/moulinette-ubuntu evaluate_student_search_results ${SEARCH_OUTPUT_PATH} ${SEARCH_INPUT_PATH} --k $(k) --max_context_length 2000 --threshold $(THRESHOLD)
 
 answer:
-	python -m student answer --query "$(QUERY)" --k $(k)
+	uv run python -m student answer --query "$(QUERY)" --k $(k)
