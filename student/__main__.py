@@ -8,7 +8,7 @@ class CLI:
     def test(self):
         print("Hello, World!")
 
-    def index(self, max_chunk_size = 2000, overlap = 200):
+    def index(self, max_chunk_size: int = 2000, overlap: int = 200):
         index_main(max_chunk_size, overlap)
 
     def search(self, query: str, k: int = 5):

@@ -32,7 +32,7 @@ class StudentSearchResults(BaseModel):
     k: int
 
 class StudentSearchResultsAndAnswer(StudentSearchResults):
-    search_results: List[MinimalAnswer]
+    search_results: List[MinimalAnswer] # type: ignore[reportUnknownArgumentType] // specified by subject despite giving warning
 
 #extras
 class Chunk(BaseModel):

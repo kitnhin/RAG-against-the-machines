@@ -1,3 +1,6 @@
+#process file ("docs" or "code")
+FILE = docs
+
 #index
 MAX_CHUNK_SIZE = 2000
 OVERLAP = 200
@@ -7,13 +10,17 @@ QUERY = What versioning scheme does vLLM use?
 k = 10
 
 #search dataset
-SEARCH_DATASET_PATH = datasets/datasets_public/public/AnsweredQuestions/dataset_code_public.json
+SEARCH_DATASET_PATH = datasets/datasets_public/public/AnsweredQuestions/dataset_$(FILE)_public.json
 SEARCH_DATASET_OUTPUT = data/output/search_results
 
 #momo search
-SEARCH_INPUT_PATH = datasets/datasets_public/public/AnsweredQuestions/dataset_code_public.json
-SEARCH_OUTPUT_PATH = data/output/search_results/dataset_code_public.json
+SEARCH_INPUT_PATH = datasets/datasets_public/public/AnsweredQuestions/dataset_$(FILE)_public.json
+SEARCH_OUTPUT_PATH = data/output/search_results/dataset_$(FILE)_public.json
+ifeq ($(FILE), docs)
+THRESHOLD = 0.8
+else
 THRESHOLD = 0.5
+endif
 
 #answer
 
@@ -31,3 +38,6 @@ momo_search:
 
 answer:
 	uv run python -m student answer --query "$(QUERY)" --k $(k)
+
+clean_output:
+	rm -rf data/output/

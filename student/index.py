@@ -78,7 +78,7 @@ def index_main(max_chunk_size: int, overlap: int) -> None:
             raise Exception(f"Index dir {repo_dir} doesn't exist")
 
         chunks_list: list[Chunk] = []
-        files_list: list[tuple(str, str)] = []
+        files_list: list[tuple[str, str]] = []
         for root, dirs, files in os.walk(repo_dir):
             for file in files:
                 extension = file.split(".")[-1]
