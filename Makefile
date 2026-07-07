@@ -39,5 +39,8 @@ momo_search:
 answer:
 	uv run python -m student answer --query "$(QUERY)" --k $(k)
 
+clean_index:
+	rm -rf data/processed/
+
 clean_output:
 	rm -rf data/output/

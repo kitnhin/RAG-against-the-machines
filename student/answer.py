@@ -3,8 +3,7 @@ from .search import search_core
 from transformers import pipeline
 from .models import MinimalAnswer, StudentSearchResultsAndAnswer
 
-generator = pipeline("text-generation", model="Qwen/Qwen3-0.6B")
-
+generator = None
 file_cache: dict[str, str]= {}
 
 def get_chunk_data(file_path: str, first_character_index: int, last_character_index: int) -> str:
@@ -28,6 +27,11 @@ def extract_generated_str(generated_text: str) -> str:
     return generated_text[idx + len("</think>"):].strip()
 
 def answer_core(query: str, k: int) -> MinimalAnswer:
+    global generator
+
+    if not generator:
+        generator = pipeline("text-generation", model="Qwen/Qwen3-0.6B")
+
     min_search_results = search_core(query, k, "single_query")
 
     context_chunks : list[str]= []

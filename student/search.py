@@ -1,15 +1,24 @@
 from .models import MinimalSource, MinimalSearchResults, StudentSearchResults
 import bm25s
 import json
+from typing import Any
 
-retriever =  bm25s.BM25.load("data/processed/bm25_index")
-with open("data/processed/chunks", "r") as f:
-    chunks_data = json.load(f)
+retriever: bm25s.BM25 | None = None
+chunks_data: list[dict[str, Any]] | None = None
+
+def load_index() -> None:
+    global retriever, chunks_data
+
+    retriever =  bm25s.BM25.load("data/processed/bm25_index")
+    with open("data/processed/chunks", "r") as f:
+        chunks_data = json.load(f)
 
 # main search logic
 def search_core(query: str, k: int, question_id: str) -> MinimalSearchResults:
-    if not retriever:
-        raise Exception("cant find bm25 index")
+
+    load_index()
+    if not retriever or not chunks_data:
+        raise Exception("Failed to load index or chunks data")
 
     query_tokens = bm25s.tokenize(query)
     results, score = retriever.retrieve(query_tokens, k=k) # results and scores are 2D arr [[0,1,2] ...]
@@ -17,9 +26,9 @@ def search_core(query: str, k: int, question_id: str) -> MinimalSearchResults:
     retrieved_sources : list[MinimalSource]= []
     for idx in results[0]:
         retrieved_sources.append(MinimalSource(
-            file_path = chunks_data[idx]["file_path"],
-            first_character_index = chunks_data[idx]["first_character_index"],
-            last_character_index = chunks_data[idx]["last_character_index"]
+            file_path= chunks_data[idx]["file_path"], # type: ignore[reportUnknownArgumentType]
+            first_character_index = chunks_data[idx]["first_character_index"], # type: ignore[reportUnknownArgumentType]
+            last_character_index = chunks_data[idx]["last_character_index"] # type: ignore[reportUnknownArgumentType]
         ))
 
     min_search_res = MinimalSearchResults(
@@ -32,9 +41,6 @@ def search_core(query: str, k: int, question_id: str) -> MinimalSearchResults:
 
 def search_main(query: str, k: int) -> StudentSearchResults | None:
     try:
-        if not retriever:
-            raise Exception("cant find bm25 index")
-
         search_res = search_core(query, k, "single_query")
 
         student_search_res = StudentSearchResults(

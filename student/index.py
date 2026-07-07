@@ -6,7 +6,7 @@ import json
 from tqdm import tqdm
 
 repo_dir = "data/raw/vllm-0.10.1"
-extensions = {"py", "md", "txt", "cu", "cuh", "h", "hpp", "cpp", "jinja"}
+extensions = {"py", "md", "txt"}
 
 def get_content_indexes(chunks: list[str], file_contents: str, chunks_list: list[Chunk], file_path: str) -> None:
     search_start = 0
