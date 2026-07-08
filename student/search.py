@@ -48,7 +48,7 @@ def search_chromadb(query: str, k: int, type: str) -> list[MinimalSource]:
     elif type == "code":
         collection = client.get_or_create_collection(name="code_chunks") #type: ignore
     else:
-        raise Exception(f"Invalid type: {type}. Must be 'docs' or 'code'")
+        collection = client.get_or_create_collection(name="all_chunks") #type: ignore
     
     results = collection.query(
         query_texts = [query],

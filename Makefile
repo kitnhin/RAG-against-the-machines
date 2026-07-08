@@ -39,6 +39,9 @@ momo_search:
 answer:
 	uv run python -m student answer --query "$(QUERY)" --k $(k)
 
+answer_dataset:
+	uv run python -m student answer_dataset --dataset_path $(SEARCH_DATASET_PATH) --k $(k) --save_directory $(SEARCH_DATASET_OUTPUT)
+
 index_and_search: clean_index index search_dataset momo_search
 
 clean_index:

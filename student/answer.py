@@ -1,10 +1,11 @@
 import json
 from .search import search_core
-from transformers import pipeline
+from transformers import pipeline, logging
 from .models import MinimalAnswer, StudentSearchResultsAndAnswer
 
 generator = None
 file_cache: dict[str, str]= {}
+logging.set_verbosity_error() # prevents warning by huggingface from being printed
 
 def get_chunk_data(file_path: str, first_character_index: int, last_character_index: int) -> str:
 
@@ -38,7 +39,7 @@ def answer_core(query: str, k: int) -> MinimalAnswer:
     for source in min_search_results.retrieved_sources:
         chunk_content = get_chunk_data(source.file_path, source.first_character_index, source.last_character_index)
         context_chunks.append(chunk_content)
-
+    
     prompt_messages = [
         {
             "role": "system",
@@ -49,7 +50,7 @@ def answer_core(query: str, k: int) -> MinimalAnswer:
             "content": f"Context:\n{''.join(context_chunks)}\n\nQuestion: {query}",
         },
     ]
-    print(f"Generating response ...")
+
     result = generator(prompt_messages, max_new_tokens=42)
     generated_text = extract_generated_str(result[0]['generated_text'][-1]["content"])
     # generated_text = "temp texts"

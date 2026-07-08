@@ -54,36 +54,26 @@ def index_chunks_bm25(chunks_list: list[Chunk]) -> None:
 
 def index_chunks_chromadb(chunks_list: list[Chunk]) -> None:
     client = chromadb.PersistentClient(path="data/processed/chromadb_index")
-    docs_collection = client.get_or_create_collection(name="docs_chunks") #type: ignore
-    code_collection = client.get_or_create_collection(name="code_chunks") #type: ignore
-
-    docs_chunks = [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] != "py"]
-    code_chunks = [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] == "py"]
-
-    batch_size = 500 # process in batch cuz chromadb got limit how much can add per .add() call (5461 items)
-    for i in tqdm(range(0, len(docs_chunks), batch_size), desc="Indexing doc chunks"):
-        batch = docs_chunks[i:i + batch_size]
-        docs_collection.add(
-            documents = [chunk.content for chunk in batch],
-            ids = [str(i) for i in range(len(batch))],
-            metadatas = [{
-                "file_path": chunk.file_path,
-                "first_character_index": chunk.first_character_index,
-                "last_character_index": chunk.last_character_index
-            } for chunk in batch]
-        )
     
-    for i in tqdm(range(0, len(code_chunks), batch_size), desc="Indexing code chunks"):
-        batch = code_chunks[i:i + batch_size]
-        code_collection.add(
-            documents = [chunk.content for chunk in batch],
-            ids = [str(i) for i in range(len(batch))],
-            metadatas = [{
-                "file_path": chunk.file_path,
-                "first_character_index": chunk.first_character_index,
-                "last_character_index": chunk.last_character_index
-            } for chunk in batch]
-        )
+    def index_chromadb_helper(collection_name: str, chunks_list: list[Chunk], type) -> None:
+        collection = client.get_or_create_collection(name=collection_name)
+
+        batch_size = 500 # process in batch cuz chromadb got limit how much can add per .add() call (5461 items)
+        for i in tqdm(range(0, len(chunks_list), batch_size), desc=f"Indexing {type} chunks"):
+            batch = chunks_list[i:i + batch_size]
+            collection.add(
+                documents = [chunk.content for chunk in batch],
+                ids = [str(i) for i in range(len(batch))],
+                metadatas = [{
+                    "file_path": chunk.file_path,
+                    "first_character_index": chunk.first_character_index,
+                    "last_character_index": chunk.last_character_index
+                } for chunk in batch]
+            )
+    index_chromadb_helper("docs_chunks", [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] != "py"], "docs")
+    index_chromadb_helper("code_chunks", [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] == "py"], "code")
+    index_chromadb_helper("all_chunks", chunks_list, "all")
+    
 
     print("Successfully indexed all chunks to chromadb")
 
