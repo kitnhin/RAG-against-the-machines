@@ -30,3 +30,6 @@ how chromadb differs from BM25:
 results: (docs, no split datasets)
     BM25: 0.84
     chromadb: 0.40
+
+results: (docs, with splitting datasets)
+    BM25: 0.9

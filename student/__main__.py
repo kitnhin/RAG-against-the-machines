@@ -11,11 +11,11 @@ class CLI:
     def index(self, max_chunk_size: int = 2000, overlap: int = 200):
         index_main(max_chunk_size, overlap)
 
-    def search(self, query: str, k: int = 5):
-        search_main(query, k)
+    def search(self, query: str, k: int = 5, type: str = "docs"):
+        search_main(query, k, type)
 
-    def search_dataset(self, dataset_path: str, k: int = 3, save_directory: str = "data/output/search_results"):
-        search_dataset_main(dataset_path, k, save_directory)
+    def search_dataset(self, dataset_path: str, k: int = 3, save_directory: str = "data/output/search_results", type: str = "docs"):
+        search_dataset_main(dataset_path, k, save_directory, type)
 
     def answer(self, query: str, k: int = 5):
         answer_main(query, k)

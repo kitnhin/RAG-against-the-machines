@@ -7,9 +7,6 @@ import json
 from tqdm import tqdm
 from .classes.configs import configs
 
-client = chromadb.PersistentClient(path="data/processed/chromadb_index")
-collection = client.get_or_create_collection(name="chunks") #type: ignore
-
 def get_content_indexes(chunks: list[str], file_contents: str, chunks_list: list[Chunk], file_path: str) -> None:
     search_start = 0
     for chunk in chunks:
@@ -43,20 +40,30 @@ def process_file(file_path: str, max_chunk_size: int, chunks_list: list[Chunk], 
     # print_chunk_list(chunks_list, file_path)
 
 def index_chunks_bm25(chunks_list: list[Chunk]) -> None:
-    tokens = bm25s.tokenize([chunk.content for chunk in chunks_list])
-    retriever = bm25s.BM25()
-    retriever.index(tokens)
-    retriever.save("data/processed/bm25_index")
-    print("Succesfully indexed chunks tp data/processed/bm25_index")
+    def build_and_save_chunks(chunks_list: list[Chunk], file_path: str) -> None:
+        tokens = bm25s.tokenize([chunk.content for chunk in chunks_list])
+        retriever = bm25s.BM25()
+        retriever.index(tokens)
+        retriever.save(file_path)
+
+    build_and_save_chunks([chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] != "py"], "data/processed/bm25_docs_index")
+    build_and_save_chunks([chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] == "py"], "data/processed/bm25_code_index")
+    build_and_save_chunks(chunks_list, "data/processed/bm25_all_index")
+
+
 
 def index_chunks_chromadb(chunks_list: list[Chunk]) -> None:
-    if not collection:
-        raise Exception("ChromaDB collection is not initialized")
-    
+    client = chromadb.PersistentClient(path="data/processed/chromadb_index")
+    docs_collection = client.get_or_create_collection(name="docs_chunks") #type: ignore
+    code_collection = client.get_or_create_collection(name="code_chunks") #type: ignore
+
+    docs_chunks = [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] != "py"]
+    code_chunks = [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] == "py"]
+
     batch_size = 500 # process in batch cuz chromadb got limit how much can add per .add() call (5461 items)
-    for i in tqdm(range(0, len(chunks_list), batch_size), desc="Indexing chunks"):
-        batch = chunks_list[i:i + batch_size]
-        collection.add(
+    for i in tqdm(range(0, len(docs_chunks), batch_size), desc="Indexing doc chunks"):
+        batch = docs_chunks[i:i + batch_size]
+        docs_collection.add(
             documents = [chunk.content for chunk in batch],
             ids = [str(i) for i in range(len(batch))],
             metadatas = [{
@@ -65,13 +72,30 @@ def index_chunks_chromadb(chunks_list: list[Chunk]) -> None:
                 "last_character_index": chunk.last_character_index
             } for chunk in batch]
         )
+    
+    for i in tqdm(range(0, len(code_chunks), batch_size), desc="Indexing code chunks"):
+        batch = code_chunks[i:i + batch_size]
+        code_collection.add(
+            documents = [chunk.content for chunk in batch],
+            ids = [str(i) for i in range(len(batch))],
+            metadatas = [{
+                "file_path": chunk.file_path,
+                "first_character_index": chunk.first_character_index,
+                "last_character_index": chunk.last_character_index
+            } for chunk in batch]
+        )
+
     print("Successfully indexed all chunks to chromadb")
 
 def save_chunks(chunks_list: list[Chunk]) -> None:
-    with open("data/processed/chunks", "w") as f:
-        chunk_dicts = [chunk.model_dump() for chunk in tqdm(chunks_list, desc="Saving chunks")]
-        json.dump(chunk_dicts, f, indent=4)
-    print("Succesfully saved chunks to data/processed/chunks.json")
+    def save_helper(chunks_list: list[Chunk], file_path: str) -> None:
+        with open(file_path, "w") as f:
+            chunk_dicts = [chunk.model_dump() for chunk in chunks_list]
+            json.dump(chunk_dicts, f, indent=4)
+    save_helper([chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] != "py"], "data/processed/docs_chunks")
+    save_helper([chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] == "py"], "data/processed/code_chunks")
+    save_helper(chunks_list, "data/processed/all_chunks")
+    print("Succesfully saved chunks to chunks")
 
     
 def index_main(max_chunk_size: int, overlap: int) -> None:
