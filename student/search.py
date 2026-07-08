@@ -1,22 +1,22 @@
 from .models import MinimalSource, MinimalSearchResults, StudentSearchResults
-import bm25s
 import json
+from .index import collection
+import bm25s
 from typing import Any
+from .classes.configs import configs
 
 retriever: bm25s.BM25 | None = None
 chunks_data: list[dict[str, Any]] | None = None
 
-def load_index() -> None:
+# main search logic
+def search_bm25(query: str, k: int, question_id: str) -> list[MinimalSource]:    
     global retriever, chunks_data
 
-    retriever =  bm25s.BM25.load("data/processed/bm25_index")
-    with open("data/processed/chunks", "r") as f:
-        chunks_data = json.load(f)
-
-# main search logic
-def search_core(query: str, k: int, question_id: str) -> MinimalSearchResults:
-
-    load_index()
+    #load retriever and chunks_data if not none exists yet
+    if not retriever or not chunks_data:
+        retriever =  bm25s.BM25.load("data/processed/bm25_index")
+        with open("data/processed/chunks", "r") as f:
+            chunks_data = json.load(f)
     if not retriever or not chunks_data:
         raise Exception("Failed to load index or chunks data")
 
@@ -30,6 +30,36 @@ def search_core(query: str, k: int, question_id: str) -> MinimalSearchResults:
             first_character_index = chunks_data[idx]["first_character_index"], # type: ignore[reportUnknownArgumentType]
             last_character_index = chunks_data[idx]["last_character_index"] # type: ignore[reportUnknownArgumentType]
         ))
+    return retrieved_sources
+
+def search_chromadb(query: str, k: int, question_id: str) -> list[MinimalSource]:
+    if not collection:
+        raise Exception("Chromadb collection is not initialized")
+    
+    results = collection.query(
+        query_texts = [query],
+        n_results = k
+    )
+
+    if not results or not results["metadatas"]:
+        raise Exception("No results found in the collection")
+
+    retrieved_sources : list[MinimalSource]= []
+    for metadata in results["metadatas"][0]:
+        retrieved_sources.append(MinimalSource(
+            file_path= metadata["file_path"], # type: ignore[reportUnknownArgumentType]
+            first_character_index = metadata["first_character_index"], # type: ignore[reportUnknownArgumentType]
+            last_character_index = metadata["last_character_index"] # type: ignore[reportUnknownArgumentType]
+        ))
+    return retrieved_sources
+
+def search_core(query: str, k: int, question_id: str) -> MinimalSearchResults:
+    if configs.RETRIEVAL_METHOD == "bm25":
+        retrieved_sources = search_bm25(query, k, question_id)
+    elif configs.RETRIEVAL_METHOD == "chromadb":
+        retrieved_sources = search_chromadb(query, k, question_id)
+    else:
+        raise Exception(f"Invalid search strategy: {configs.RETRIEVAL_METHOD}")
 
     min_search_res = MinimalSearchResults(
         question_id = question_id,

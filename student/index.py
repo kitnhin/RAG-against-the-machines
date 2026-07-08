@@ -2,11 +2,13 @@ import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 from .models import Chunk
 import bm25s
+import chromadb
 import json
 from tqdm import tqdm
+from .classes.configs import configs
 
-repo_dir = "data/raw/vllm-0.10.1"
-extensions = {"py", "md", "txt"}
+client = chromadb.PersistentClient(path="data/processed/chromadb_index")
+collection = client.get_or_create_collection(name="chunks") #type: ignore
 
 def get_content_indexes(chunks: list[str], file_contents: str, chunks_list: list[Chunk], file_path: str) -> None:
     search_start = 0
@@ -38,32 +40,32 @@ def process_file(file_path: str, max_chunk_size: int, chunks_list: list[Chunk], 
 
     chunks = splitter.split_text(file_contents)
     get_content_indexes(chunks, file_contents, chunks_list, file_path)
+    # print_chunk_list(chunks_list, file_path)
 
-    # # printing
-    # print(f"\n======== Chunks for file: {file_path} ========")
-    
-    # chunk_num = 1
-    # for chunk in chunks_list:
-    #     if chunk.file_path == file_path:
-    #         print(f"CHUNK #{chunk_num}")
-    #         print(f"   Indices: [{chunk.first_character_index} -> {chunk.last_character_index}]")
-    #         print(f"   --- Content ---")
-            
-    #         # Indent content with a vertical pipe border to keep it scannable
-    #         indented_content = "\n".join(f"   | {line}" for line in chunk.content.splitlines())
-    #         print(indented_content)
-            
-    #         print(f"   {'-' * 40}\n")
-    #         chunk_num += 1
-            
-    # print(f"================================================\n")
-
-def index_chunks(chunks_list: list[Chunk]) -> None:
+def index_chunks_bm25(chunks_list: list[Chunk]) -> None:
     tokens = bm25s.tokenize([chunk.content for chunk in chunks_list])
     retriever = bm25s.BM25()
     retriever.index(tokens)
     retriever.save("data/processed/bm25_index")
     print("Succesfully indexed chunks tp data/processed/bm25_index")
+
+def index_chunks_chromadb(chunks_list: list[Chunk]) -> None:
+    if not collection:
+        raise Exception("ChromaDB collection is not initialized")
+    
+    batch_size = 500 # process in batch cuz chromadb got limit how much can add per .add() call (5461 items)
+    for i in tqdm(range(0, len(chunks_list), batch_size), desc="Indexing chunks"):
+        batch = chunks_list[i:i + batch_size]
+        collection.add(
+            documents = [chunk.content for chunk in batch],
+            ids = [str(i) for i in range(len(batch))],
+            metadatas = [{
+                "file_path": chunk.file_path,
+                "first_character_index": chunk.first_character_index,
+                "last_character_index": chunk.last_character_index
+            } for chunk in batch]
+        )
+    print("Successfully indexed all chunks to chromadb")
 
 def save_chunks(chunks_list: list[Chunk]) -> None:
     with open("data/processed/chunks", "w") as f:
@@ -74,23 +76,50 @@ def save_chunks(chunks_list: list[Chunk]) -> None:
     
 def index_main(max_chunk_size: int, overlap: int) -> None:
     try:
-        if not os.path.isdir(repo_dir):
-            raise Exception(f"Index dir {repo_dir} doesn't exist")
+        global client, collection
+        if not os.path.isdir(configs.REPO_DIR):
+            raise Exception(f"Index dir {configs.REPO_DIR} doesn't exist")
 
         chunks_list: list[Chunk] = []
         files_list: list[tuple[str, str]] = []
-        for root, dirs, files in os.walk(repo_dir):
+        for root, dirs, files in os.walk(configs.REPO_DIR):
             for file in files:
                 extension = file.split(".")[-1]
                 file_path = os.path.join(root, file)
-                if extension in extensions:
+                if extension in configs.PROCESS_EXTENSIONS:
                     files_list.append((file_path, extension))
             
         for file_path, extension in tqdm(files_list, desc="Chunking files"):
             process_file(file_path, max_chunk_size, chunks_list, extension, overlap)
 
-        index_chunks(chunks_list)
+        #index chunk
+        if configs.RETRIEVAL_METHOD == "bm25":
+            index_chunks_bm25(chunks_list)
+        elif configs.RETRIEVAL_METHOD == "chromadb":
+            index_chunks_chromadb(chunks_list)
+        
         save_chunks(chunks_list)
 
     except Exception as e:
         print(f"Error: {e}")
+
+
+def print_chunk_list(chunks_list: list[Chunk], file_path: str) -> None:
+    # printing
+    print(f"\n======== Chunks for file: {file_path} ========")
+    
+    chunk_num = 1
+    for chunk in chunks_list:
+        if chunk.file_path == file_path:
+            print(f"CHUNK #{chunk_num}")
+            print(f"   Indices: [{chunk.first_character_index} -> {chunk.last_character_index}]")
+            print(f"   --- Content ---")
+            
+            # Indent content with a vertical pipe border to keep it scannable
+            indented_content = "\n".join(f"   | {line}" for line in chunk.content.splitlines())
+            print(indented_content)
+            
+            print(f"   {'-' * 40}\n")
+            chunk_num += 1
+            
+    print(f"================================================\n")

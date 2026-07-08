@@ -14,3 +14,19 @@ overlapping structure (tbc): (for test.txt)
 7) lvl3 (split by " "): repeat steps like lvl2 (split, push sections to lvl3 doc, cmp size, save chunk, pop, etc)
 8) lvl2: continue after process long line
 9) lvl1: after process first chunk at lvl2, append second section to doc1 (empty)-> doc1 length still < max length -> append third section -> end file -> save chunk
+
+how chromadb works:
+1) embedding - chromadb takes each chunk and gives it to an embeddings model (small neural network, by default, all-MiniLM-L6-v2), which
+    outputs a list of 384 numbers (vector / embedding) for each chunk. Text wif similar meanings get similar numbers
+2) storing -  stores the vectors, documents (actual chunk text), and metadata (extra info such as file_name, first and last char index)
+3) query - 1) embed the query to get the vector numbers for the query
+            2) find the closest vector in the db (uses HNSW algo (not rly important to rmb))
+            3) returns the matching results along wif the metadata
+how chromadb differs from BM25:
+1) bm25 scores chunks based on how many words it contains that appear in the query and how rare the words in the query are acc all chunks,
+ but chromadb uses vectors based on word meanings
+
+
+results: (docs, no split datasets)
+    BM25: 0.84
+    chromadb: 0.40
