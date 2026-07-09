@@ -2,7 +2,7 @@ class configs: #singleton class
     _instance = None
 
     #main configs
-    RETRIEVAL_METHOD: str = "chromadb" # "bm25" or "chromadb"
+    RETRIEVAL_METHOD: str = "bm25" # "bm25" or "chromadb"
 
     #index
     REPO_DIR: str = "data/raw/vllm-0.10.1"

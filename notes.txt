@@ -33,3 +33,4 @@ results: (docs, no split datasets)
 
 results: (docs, with splitting datasets)
     BM25: 0.9
+    chromadb: 0.41

@@ -4,7 +4,7 @@ from .models import MinimalAnswer, StudentSearchResultsAndAnswer
 import json
 from tqdm import tqdm
 
-def search_dataset_main(dataset_path: str, k: int, save_directory: str) -> StudentSearchResultsAndAnswer | None:
+def answer_dataset_main(dataset_path: str, k: int, save_directory: str) -> StudentSearchResultsAndAnswer | None:
     try:
         with open(dataset_path, "r") as f:
             dataset = json.load(f)
