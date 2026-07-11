@@ -55,15 +55,15 @@ def index_chunks_bm25(chunks_list: list[Chunk]) -> None:
 def index_chunks_chromadb(chunks_list: list[Chunk]) -> None:
     client = chromadb.PersistentClient(path="data/processed/chromadb_index")
     
-    def index_chromadb_helper(collection_name: str, chunks_list: list[Chunk], type) -> None:
+    def index_chromadb_helper(collection_name: str, chunks_list: list[Chunk], type: str) -> None:
         collection = client.get_or_create_collection(name=collection_name)
 
-        batch_size = 500 # process in batch cuz chromadb got limit how much can add per .add() call (5461 items)
+        batch_size = 50 # process in batch cuz chromadb got limit how much can add per .add() call (5461 items)
         for i in tqdm(range(0, len(chunks_list), batch_size), desc=f"Indexing {type} chunks"):
             batch = chunks_list[i:i + batch_size]
             collection.add(
                 documents = [chunk.content for chunk in batch],
-                ids = [str(i) for i in range(len(batch))],
+                ids = [str(i + j) for j in range(len(batch))],
                 metadatas = [{
                     "file_path": chunk.file_path,
                     "first_character_index": chunk.first_character_index,
@@ -73,7 +73,6 @@ def index_chunks_chromadb(chunks_list: list[Chunk]) -> None:
     index_chromadb_helper("docs_chunks", [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] != "py"], "docs")
     index_chromadb_helper("code_chunks", [chunk for chunk in chunks_list if chunk.file_path.split(".")[-1] == "py"], "code")
     index_chromadb_helper("all_chunks", chunks_list, "all")
-    
 
     print("Successfully indexed all chunks to chromadb")
 
@@ -90,7 +89,6 @@ def save_chunks(chunks_list: list[Chunk]) -> None:
     
 def index_main(max_chunk_size: int, overlap: int) -> None:
     try:
-        global client, collection
         if not os.path.isdir(configs.REPO_DIR):
             raise Exception(f"Index dir {configs.REPO_DIR} doesn't exist")
 
@@ -111,6 +109,11 @@ def index_main(max_chunk_size: int, overlap: int) -> None:
             index_chunks_bm25(chunks_list)
         elif configs.RETRIEVAL_METHOD == "chromadb":
             index_chunks_chromadb(chunks_list)
+        elif configs.RETRIEVAL_METHOD == "hybrid":
+            index_chunks_bm25(chunks_list)
+            index_chunks_chromadb(chunks_list)
+        else:
+            raise Exception(f"Invalid retrieval method: {configs.RETRIEVAL_METHOD}")
         
         save_chunks(chunks_list)
 

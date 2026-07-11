@@ -11,7 +11,7 @@ def answer_dataset_main(dataset_path: str, k: int, save_directory: str) -> Stude
         
         all_search_and_ans : list[MinimalAnswer]= []
 
-        for question in tqdm(dataset["rag_questions"], desc="Searching dataset"):
+        for question in tqdm(dataset["rag_questions"], desc="Answering dataset"):
             query = question["question"]
             min_search_and_ans = answer_core(query, k)
             all_search_and_ans.append(min_search_and_ans)

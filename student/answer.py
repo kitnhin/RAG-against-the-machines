@@ -1,20 +1,21 @@
 import json
 from .search import search_core
-from transformers import pipeline, logging
+from transformers import logging
 from .models import MinimalAnswer, StudentSearchResultsAndAnswer
+from .classes.configs import configs
+from .classes.caches import caches
 
-generator = None
-file_cache: dict[str, str]= {}
+
 logging.set_verbosity_error() # prevents warning by huggingface from being printed
 
 def get_chunk_data(file_path: str, first_character_index: int, last_character_index: int) -> str:
 
-    if file_path in file_cache:
-        file_contents = file_cache[file_path]
+    if file_path in caches.file_cache:
+        file_contents = caches.file_cache[file_path]
     else:
         with open(file_path, 'r') as f:
             file_contents = f.read()
-        file_cache[file_path] = file_contents
+        caches.file_cache[file_path] = file_contents
 
     chunk_content = file_contents[first_character_index:last_character_index]
     return chunk_content
@@ -28,10 +29,9 @@ def extract_generated_str(generated_text: str) -> str:
     return generated_text[idx + len("</think>"):].strip()
 
 def answer_core(query: str, k: int) -> MinimalAnswer:
-    global generator
 
-    if not generator:
-        generator = pipeline("text-generation", model="Qwen/Qwen3-0.6B")
+    if query in caches.answer_cache:
+        return caches.answer_cache[query]
 
     min_search_results = search_core(query, k, "single_query")
 
@@ -51,14 +51,20 @@ def answer_core(query: str, k: int) -> MinimalAnswer:
         },
     ]
 
-    result = generator(prompt_messages, max_new_tokens=42)
-    generated_text = extract_generated_str(result[0]['generated_text'][-1]["content"])
-    # generated_text = "temp texts"
-
-    return MinimalAnswer(
-        **min_search_results.model_dump(),
-        answer = generated_text
+    model_client = caches.get_model_client()
+    response = model_client.chat.completions.create(
+        model=configs.MODEL,
+        messages=prompt_messages, #type: ignore
     )
+    answer = response.choices[0].message.content
+
+    min_ans = MinimalAnswer(
+        **(min_search_results.model_dump()), #model dump converts pydantic to dict, **unpacks the dict into fields
+        answer = answer #type: ignore
+    )
+
+    caches.answer_cache[query] = min_ans
+    return min_ans
 
 def answer_main(query: str, k: int = 5) -> StudentSearchResultsAndAnswer | None:
     try:

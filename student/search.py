@@ -1,29 +1,17 @@
-import chromadb
-
 from .models import MinimalSource, MinimalSearchResults, StudentSearchResults
 import json
 import bm25s
-from typing import Any
+# from typing import Any
 from .classes.configs import configs
-
-retriever: bm25s.BM25 | None = None
-chunks_data: list[dict[str, Any]] | None = None
+from .classes.caches import caches
+from .search_utils import rrf
 
 # main search logic
 def search_bm25(query: str, k: int, type: str) -> list[MinimalSource]:    
-    global retriever, chunks_data
 
     #load retriever and chunks_data if not none exists yet
-    if not retriever or not chunks_data:
-        if type == "docs":
-            retriever =  bm25s.BM25.load("data/processed/bm25_docs_index")
-            chunks_data = json.load(open("data/processed/docs_chunks", "r"))
-        elif type == "code":
-            retriever =  bm25s.BM25.load("data/processed/bm25_code_index")
-            chunks_data = json.load(open("data/processed/code_chunks", "r"))
-        else:
-            retriever =  bm25s.BM25.load("data/processed/bm25_all_index")
-            chunks_data = json.load(open("data/processed/all_chunks", "r"))
+    retriever = caches.get_bm25_retriever(type)
+    chunks_data = caches.get_chunks_data(type)
 
     if not retriever or not chunks_data:
         raise Exception("Failed to load index or chunks data")
@@ -41,12 +29,15 @@ def search_bm25(query: str, k: int, type: str) -> list[MinimalSource]:
     return retrieved_sources
 
 def search_chromadb(query: str, k: int, type: str) -> list[MinimalSource]:
-    client = chromadb.PersistentClient(path="data/processed/chromadb_index")
+    client = caches.get_chromadb_client()
 
-    if type == "docs":
-        collection = client.get_or_create_collection(name="docs_chunks") #type: ignore
-    elif type == "code":
-        collection = client.get_or_create_collection(name="code_chunks") #type: ignore
+    if configs.SPLIT_CHUNKS == True:
+        if type == "docs":
+            collection = client.get_or_create_collection(name="docs_chunks") #type: ignore
+        elif type == "code":
+            collection = client.get_or_create_collection(name="code_chunks") #type: ignore
+        else:
+            collection = client.get_or_create_collection(name="all_chunks") #type: ignore
     else:
         collection = client.get_or_create_collection(name="all_chunks") #type: ignore
     
@@ -72,15 +63,22 @@ def search_core(query: str, k: int, question_id: str, type: str = "all") -> Mini
         retrieved_sources = search_bm25(query, k, type)
     elif configs.RETRIEVAL_METHOD == "chromadb":
         retrieved_sources = search_chromadb(query, k, type)
+    elif configs.RETRIEVAL_METHOD == "hybrid":
+        min_source_lists: list[list[MinimalSource]] = []
+        min_source_lists.append(search_bm25(query, k, type))
+        min_source_lists.append(search_chromadb(query, k, type))
+        retrieved_sources = rrf(min_source_lists, k)
     else:
         raise Exception(f"Invalid search strategy: {configs.RETRIEVAL_METHOD}")
-
+    
     min_search_res = MinimalSearchResults(
         question_id = question_id,
         question_str = query,
         retrieved_sources = retrieved_sources
     )
     return min_search_res
+        
+
 
 
 def search_main(query: str, k: int, type: str) -> StudentSearchResults | None:
