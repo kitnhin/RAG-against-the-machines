@@ -4,7 +4,7 @@ import bm25s
 # from typing import Any
 from .classes.configs import configs
 from .classes.caches import caches
-from .search_utils import rrf
+from .search_utils import rrf, rewrite_queries
 
 # main search logic
 def search_bm25(query: str, k: int, type: str) -> list[MinimalSource]:    
@@ -59,18 +59,29 @@ def search_chromadb(query: str, k: int, type: str) -> list[MinimalSource]:
     return retrieved_sources
 
 def search_core(query: str, k: int, question_id: str, type: str = "all") -> MinimalSearchResults:
-    if configs.RETRIEVAL_METHOD == "bm25":
-        retrieved_sources = search_bm25(query, k, type)
-    elif configs.RETRIEVAL_METHOD == "chromadb":
-        retrieved_sources = search_chromadb(query, k, type)
-    elif configs.RETRIEVAL_METHOD == "hybrid":
+    def _retrieve_sources(q: str):
+        if configs.RETRIEVAL_METHOD == "bm25":
+            retrieved_sources = search_bm25(q, k, type)
+        elif configs.RETRIEVAL_METHOD == "chromadb":
+            retrieved_sources = search_chromadb(q, k, type)
+        elif configs.RETRIEVAL_METHOD == "hybrid":
+            min_source_lists: list[list[MinimalSource]] = []
+            min_source_lists.append(search_bm25(q, k, type))
+            min_source_lists.append(search_chromadb(q, k, type))
+            retrieved_sources = rrf(min_source_lists, k)
+        else:
+            raise Exception(f"Invalid search strategy: {configs.RETRIEVAL_METHOD}")
+        return retrieved_sources
+    
+    if configs.MULTI_QUERY:
+        alt_queries = rewrite_queries(query)
         min_source_lists: list[list[MinimalSource]] = []
-        min_source_lists.append(search_bm25(query, k, type))
-        min_source_lists.append(search_chromadb(query, k, type))
+        for q in alt_queries:
+            min_source_lists.append(_retrieve_sources(q))
         retrieved_sources = rrf(min_source_lists, k)
     else:
-        raise Exception(f"Invalid search strategy: {configs.RETRIEVAL_METHOD}")
-    
+        retrieved_sources = _retrieve_sources(query)
+
     min_search_res = MinimalSearchResults(
         question_id = question_id,
         question_str = query,

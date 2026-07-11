@@ -2,8 +2,9 @@ class configs: #singleton class
     _instance = None
 
     #main configs
-    RETRIEVAL_METHOD: str = "hybrid" # "bm25" or "chromadb" or "hybrid"
-    SPLIT_CHUNKS: bool = False #specifies whether to separate "docs" and "code" chunks when searching, or just use all
+    RETRIEVAL_METHOD: str = "chromadb" # "bm25" or "chromadb" or "hybrid"
+    SPLIT_CHUNKS: bool = True #specifies whether to separate "docs" and "code" chunks when searching, or just use all
+    MULTI_QUERY: bool = False
 
     #index
     REPO_DIR: str = "data/raw/vllm-0.10.1"
@@ -16,7 +17,6 @@ class configs: #singleton class
     #currently unused:
     EMBEDDING_MODEL = "all-minilm:22m" 
     EMBEDDING_URL = "http://localhost:11434/api/embeddings"
-    MULTI_QUERY: bool = True
 
     def __new__(cls):
         if cls._instance is None:
