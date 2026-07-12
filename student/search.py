@@ -4,7 +4,7 @@ import bm25s
 # from typing import Any
 from .classes.configs import configs
 from .classes.caches import caches
-from .search_utils import rrf, rewrite_queries
+from .search_utils import rrf, rewrite_queries, generate_hyde
 
 # main search logic
 def search_bm25(query: str, k: int, type: str) -> list[MinimalSource]:    
@@ -73,14 +73,19 @@ def search_core(query: str, k: int, question_id: str, type: str = "all") -> Mini
             raise Exception(f"Invalid search strategy: {configs.RETRIEVAL_METHOD}")
         return retrieved_sources
     
+    queries = [query]
+    min_source_lists: list[list[MinimalSource]] = []
+    
     if configs.MULTI_QUERY:
-        alt_queries = rewrite_queries(query)
-        min_source_lists: list[list[MinimalSource]] = []
-        for q in alt_queries:
-            min_source_lists.append(_retrieve_sources(q))
-        retrieved_sources = rrf(min_source_lists, k)
-    else:
-        retrieved_sources = _retrieve_sources(query)
+        queries.extend(rewrite_queries(query))
+    
+    if configs.HYDE:
+        queries = generate_hyde(queries)
+
+    for q in queries:
+        min_source_lists.append(_retrieve_sources(q))
+    
+    retrieved_sources = rrf(min_source_lists, k)
 
     min_search_res = MinimalSearchResults(
         question_id = question_id,

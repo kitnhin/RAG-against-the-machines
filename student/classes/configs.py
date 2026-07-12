@@ -2,9 +2,10 @@ class configs: #singleton class
     _instance = None
 
     #main configs
-    RETRIEVAL_METHOD: str = "chromadb" # "bm25" or "chromadb" or "hybrid"
+    RETRIEVAL_METHOD: str = "hybrid" # "bm25" or "chromadb" or "hybrid"
     SPLIT_CHUNKS: bool = True #specifies whether to separate "docs" and "code" chunks when searching, or just use all
-    MULTI_QUERY: bool = False
+    MULTI_QUERY: bool = False #rewrites multiple vers of the query then use vers to get chunks
+    HYDE: bool = True #Hypothetical Document Embeddings, gives draft ans, then uses that to retrieve chunks
 
     #index
     REPO_DIR: str = "data/raw/vllm-0.10.1"

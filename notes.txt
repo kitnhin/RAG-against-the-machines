@@ -40,4 +40,30 @@ results: (docs, with splitting datasets)
 results: (docs, with splitting datasets, and multiple query)
     Bm25: 0.91
     chromadb: 0.55
-    hybrid: 0.83
+    hybrid: 0.84
+
+results: (docs, with splitting datasets, and multiply query, and hyde)
+    BM25: 0.81
+    chromadb: 0.52
+    hybrid: 0.82
+
+---------------------------------------------------------------------------
+docs: all dataset
+bm25: 0.84
+chromadb: 0.54
+hybrid: 0.80
+
+docs: split dataset (base case):
+bm25: 0.9
+chromadb: 0.57
+hybrid: 0.86
+
+docs: multiple query:
+bm25: 0.91
+chromadb: 0.56
+hybrid: 0.84
+
+docs: hyde:
+bm25: 0.81
+chromadb: 0.53
+hybrid: 0.81
